@@ -11,7 +11,7 @@ REM if "%msvc%"=="1"    set clang=0 && echo [msvc compile]
 REM if "%clang%"=="1"   set msvc=0 && echo [clang compile]
 
 set cl_common=     /I..\src\ /nologo /FC /Z7
-set cl_debug=      call cl /Od /Ob1 /DBUILD_DEBUG=1 %cl_common%
+set cl_debug=      call cl /Od /Ob1 /DBUILD_DEBUG=1 /DBUILD_INTERNAL=1 %cl_common%
 
 :: ------ prep build directory ------
 if not exist build mkdir build

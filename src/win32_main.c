@@ -24,12 +24,13 @@
  */
 
 #include <windows.h>
+#include <stdio.h>
 
 #include "win32_platform.c"
 
 typedef struct win32_offscreen_buffer
 {
-    // NOTE(casey): Pixels are always 32-bits wide, Memory Order BB GG RR XX
+    // Pixels are always 32-bits wide, Memory Order BB GG RR XX
     BITMAPINFO Info;
     void *Memory;
     int Width;
@@ -59,30 +60,6 @@ Win32GetWindowDimension(HWND Window)
     return(Result);
 }
 
-/* internal void */
-/* RenderWeirdGradient(win32_offscreen_buffer Buffer, int BlueOffset, int GreenOffset) */
-/* { */
-
-/*     u8 *Row = (u8 *)Buffer.Memory; */    
-/*     for(int Y = 0; */
-/*         Y < Buffer.Height; */
-/*         ++Y) */
-/*     { */
-/*         u32 *Pixel = (u32 *)Row; */
-/*         for(int X = 0; */
-/*             X < Buffer.Width; */
-/*             ++X) */
-/*         { */
-/*             u8 Blue = (X + BlueOffset); */
-/*             u8 Green = (Y + GreenOffset); */
-
-/*             *Pixel++ = ((Green << 8) | Blue); */
-/*         } */
-        
-/*         Row += Buffer.Pitch; */
-/*     } */
-/* } */
-
 internal void
 Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 {
@@ -96,7 +73,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 
     int BytesPerPixel = 4;
 
-    // NOTE(casey): When the biHeight field is negative, this is the clue to
+    // When the biHeight field is negative, this is the clue to
     // Windows to treat this bitmap as top-down, not bottom-up, meaning that
     // the first three bytes of the image are the color for the top left pixel
     // in the bitmap, not the bottom left!
@@ -111,7 +88,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
     Buffer->Memory = VirtualAlloc(0, BitmapMemorySize, MEM_COMMIT, PAGE_READWRITE);
     Buffer->Pitch = Width*BytesPerPixel;
 
-    // TODO(casey): Probably clear this to black
+    // TODO: Probably clear this to black
 }
 
 internal void
@@ -119,9 +96,9 @@ Win32DisplayBufferInWindow(HDC DeviceContext,
                            int WindowWidth, int WindowHeight,
                            win32_offscreen_buffer Buffer)
 {
-    // TODO(casey): Aspect ratio correction
+    // TODO: Aspect ratio correction
     
-    // TODO(casey): Play with stretch modes
+    // TODO: Play with stretch modes
     StretchDIBits(DeviceContext,
                   /*
                   X, Y, Width, Height,
@@ -133,6 +110,8 @@ Win32DisplayBufferInWindow(HDC DeviceContext,
                   &Buffer.Info,
                   DIB_RGB_COLORS, SRCCOPY);
 }
+
+global_variable game_input Input = {};
 
 LRESULT CALLBACK
 Win32MainWindowCallback(HWND Window,
@@ -146,7 +125,7 @@ Win32MainWindowCallback(HWND Window,
     {
         case WM_CLOSE:
         {
-            // TODO(casey): Handle this with a message to the user?
+            // TODO: Handle this with a message to the user?
             GlobalRunning = 0;
         } break;
 
@@ -157,7 +136,7 @@ Win32MainWindowCallback(HWND Window,
 
         case WM_DESTROY:
         {
-            // TODO(casey): Handle this as an error - recreate window?
+            // TODO: Handle this as an error - recreate window?
             GlobalRunning = 0;
         } break;
 
@@ -169,65 +148,115 @@ Win32MainWindowCallback(HWND Window,
             u32 VKCode = WParam;
             int WasDown = ((LParam & (1<<30)) != FALSE); // the previous key state
             int IsDown = ((LParam & (1<<31)) == FALSE); // the previous key state
-
+            
             if (WasDown != IsDown)
             {
                 if (VKCode == 'W')
                 {
-                    OutputDebugStringA("W Pressed");
-                } 
-                else if (VKCode == 'A')
-                {
-                    OutputDebugStringA("A Pressed");
-                }
-                else if (VKCode == 'S')
-                {
-                    OutputDebugStringA("S Pressed");
-                }
-                else if (VKCode == 'D')
-                {
-                    OutputDebugStringA("D Pressed");
-                }
-                else if (VKCode == 'E')
-                {
-                    OutputDebugStringA("E Pressed");
-                }
-                else if (VKCode == 'Q')
-                {
-                    OutputDebugStringA("Q Pressed");
-                }
-                else if (VKCode == VK_UP)
-                {
-                    OutputDebugStringA("Up Pressed");
-                }
-                else if (VKCode == VK_LEFT)
-                {
-                    OutputDebugStringA("Left Pressed");
-                } 
-                else if (VKCode == VK_DOWN)
-                {
-                    OutputDebugStringA("Down Pressed");
-                } 
-                else if (VKCode == VK_RIGHT)
-                {
-                    OutputDebugStringA("Right Pressed");
-                } 
-                else if (VKCode == VK_ESCAPE)
-                {
-                    OutputDebugStringA("Escape: ");
                     if (IsDown)
                     {
-                        OutputDebugStringA("IsDown");
+                        Input.Controller.Up.EndedDown = 1;
+                        fprintf(stderr, "IsDown");
                     } 
                     else if (WasDown)
                     {
-                        OutputDebugStringA("WasDown");
+                        Input.Controller.Up.EndedDown = 0;
+                        fprintf(stderr, "WasDown");
                     }
-                    OutputDebugStringA("\n");
+                    fprintf(stderr, "W PRESSED\n");
+                } 
+                else if (VKCode == 'A')
+                {
+                    if (IsDown)
+                    {
+                        Input.Controller.Left.EndedDown = 1;
+                        fprintf(stderr, "IsDown");
+                    } 
+                    else if (WasDown)
+                    {
+                        Input.Controller.Left.EndedDown = 0;
+                        fprintf(stderr, "WasDown");
+                    }
+                    fprintf(stderr, "A PRESSED\n");
+                }
+                else if (VKCode == 'S')
+                {
+                    if (IsDown)
+                    {
+                        Input.Controller.Down.EndedDown = 1;
+                        fprintf(stderr, "IsDown");
+                    } 
+                    else if (WasDown)
+                    {
+                        Input.Controller.Down.EndedDown = 0;
+                        fprintf(stderr, "WasDown");
+                    }
+                    fprintf(stderr, "S PRESSED\n");
+                }
+                else if (VKCode == 'D')
+                {
+                    if (IsDown)
+                    {
+                        Input.Controller.Right.EndedDown = 1;
+                        fprintf(stderr, "IsDown");
+                    } 
+                    else if (WasDown)
+                    {
+                        Input.Controller.Right.EndedDown = 0;
+                        fprintf(stderr, "WasDown");
+                    }
+                    fprintf(stderr, "D PRESSED\n");
+                }
+                else if (VKCode == 'E')
+                {
+                    fprintf(stderr, "E PRESSED\n");
+                }
+                else if (VKCode == 'Q')
+                {
+                    fprintf(stderr, "Q PRESSED\n");
+                }
+                else if (VKCode == VK_UP)
+                {
+                    fprintf(stderr, "UP PRESSED\n");
+                }
+                else if (VKCode == VK_LEFT)
+                {
+                    fprintf(stderr, "LEFT PRESSED\n");
+                } 
+                else if (VKCode == VK_DOWN)
+                {
+                    fprintf(stderr, "DOWN PRESSED\n");
+                } 
+                else if (VKCode == VK_RIGHT)
+                {
+                    fprintf(stderr, "RIGHT PRESSED\n");
+                } 
+                else if (VKCode == VK_ESCAPE)
+                {
+                    fprintf(stderr, "Escape:");
+                    if (IsDown)
+                    {
+                        fprintf(stderr, "IsDown");
+                    } 
+                    else if (WasDown)
+                    {
+                        fprintf(stderr, "WasDown");
+                    }
+                    fprintf(stderr, "\n");
                 } 
                 else if (VKCode == VK_SPACE)
                 {
-                    OutputDebugStringA("Escape Pressed");
+                    if (IsDown)
+                    {
+                        Input.Controller.Space.EndedDown = 1;
+                        fprintf(stderr, "IsDown");
+                    } 
+                    else if (WasDown)
+                    {
+                        Input.Controller.Space.EndedDown = 0;
+                        fprintf(stderr, "WasDown");
+                    }
+                    fprintf(stderr, "\n");
                 } 
             }
 
@@ -292,7 +321,7 @@ WinMain(HINSTANCE Instance,
                 0);
         if(Window)
         {
-            // NOTE(casey): Since we specified CS_OWNDC, we can just
+            // NOTE: Since we specified CS_OWNDC, we can just
             // get one device context and use it forever because we
             // are not sharing it with anyone.
             HDC DeviceContext = GetDC(Window);
@@ -304,66 +333,87 @@ WinMain(HINSTANCE Instance,
 
             LARGE_INTEGER LastCounter;
             QueryPerformanceCounter(&LastCounter);
-            
-            while(GlobalRunning)
+
+#if BUILD_INTERNAL
+            LPVOID BaseAddress = (void *)TB((u64)2);
+#else
+            LPVOID BaseAddress = 0; 
+#endif
+
+            game_memory Memory = {};
+            Memory.PermenantStorageSize = MB(64);
+            Memory.ScratchStorageSize = GB((u64)4);
+
+            u64 TotalSize = Memory.PermenantStorageSize + Memory.ScratchStorageSize;
+            Memory.PermenantStorage = VirtualAlloc(BaseAddress, TotalSize, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+            Memory.ScratchStorage = ((u8 *)Memory.PermenantStorageSize + Memory.PermenantStorageSize);
+
+            if (Memory.PermenantStorage && Memory.ScratchStorage) 
             {
-                LARGE_INTEGER BeginCounter;
-                QueryPerformanceCounter(&BeginCounter);
-
-                MSG Message;
-
-                while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
+                while(GlobalRunning)
                 {
-                    if(Message.message == WM_QUIT)
+                    LARGE_INTEGER BeginCounter;
+                    QueryPerformanceCounter(&BeginCounter);
+
+                    MSG Message;
+
+                    while(PeekMessage(&Message, 0, 0, 0, PM_REMOVE))
                     {
-                        GlobalRunning = 0;
+                        if(Message.message == WM_QUIT)
+                        {
+                            GlobalRunning = 0;
+                        }
+
+                        TranslateMessage(&Message);
+                        DispatchMessageA(&Message);
                     }
-                    
-                    TranslateMessage(&Message);
-                    DispatchMessageA(&Message);
+
+                    game_offscreen_buffer Buffer = {};
+                    Buffer.Memory = GlobalBackbuffer.Memory;
+                    Buffer.Width = GlobalBackbuffer.Width;
+                    Buffer.Height = GlobalBackbuffer.Height;
+                    Buffer.Pitch = GlobalBackbuffer.Pitch;
+                    GameUpdateAndRender(&Memory, &Input, &Buffer);
+
+                    win32_window_dimension Dimension = Win32GetWindowDimension(Window);
+                    Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height,
+                            GlobalBackbuffer);
+
+                    u64 EndCycleCount = __rdtsc();
+                    u64 CyclesElapsed = EndCycleCount - LastCycleCount;
+
+                    // MS per frame
+                    LARGE_INTEGER EndCounter;
+                    QueryPerformanceCounter(&EndCounter);
+                    u64 CounterElasped = EndCounter.QuadPart - LastCounter.QuadPart;
+                    // (how many elapsed / how many per second = how many seconds elapsed)
+                    u32 MSPerFrame = (u32)((1000*CounterElasped) / PerfCountFrequency);
+                    u32 FPS = (PerfCountFrequency / CounterElasped);
+                    u32 MCPF = (u32)(CyclesElapsed / (1000 * 1000)) ;
+                    // FPS * MCPF = ~processor speed
+
+                    char buffer[256];
+                    wsprintf(buffer, "%dms/f, %df/s, %dmc/f\n", MSPerFrame, FPS, MCPF);
+                    /* fprintf(stderr, "%s", buffer); */
+
+                    LastCounter = EndCounter;
+                    LastCycleCount = EndCycleCount;
                 }
-
-                game_offscreen_buffer Buffer = {};
-                Buffer.Memory = GlobalBackbuffer.Memory;
-                Buffer.Width = GlobalBackbuffer.Width;
-                Buffer.Height = GlobalBackbuffer.Height;
-                Buffer.Pitch = GlobalBackbuffer.Pitch;
-                GameUpdateAndRender(&Buffer, XOffset, YOffset);
-
-                win32_window_dimension Dimension = Win32GetWindowDimension(Window);
-                Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height,
-                                           GlobalBackbuffer);
-
-                // how many
-                u64 EndCycleCount = __rdtsc();
-                u64 CyclesElapsed = EndCycleCount - LastCycleCount;
-
-                // MS per frame
-                LARGE_INTEGER EndCounter;
-                QueryPerformanceCounter(&EndCounter);
-                u64 CounterElasped = EndCounter.QuadPart - LastCounter.QuadPart;
-                 // (how many elapsed / how many per second = how many seconds elapsed)
-                u32 MSPerFrame = (u32)((1000*CounterElasped) / PerfCountFrequency);
-                u32 FPS = (PerfCountFrequency / CounterElasped);
-                u32 MCPF = (u32)(CyclesElapsed / (1000 * 1000)) ;
-                // FPS * MCPF = ~processor speed
-
-                char buffer[256];
-                wsprintf(buffer, "%dms/f, %df/s, %dmc/f\n", MSPerFrame, FPS, MCPF);
-                OutputDebugStringA(buffer);
-
-                LastCounter = EndCounter;
-                LastCycleCount = EndCycleCount;
+            } 
+            else 
+            {
+                // log that the game couldn't start
+                fprintf(stderr, "ERROR: unable to init game");
             }
         }
         else
         {
-            // TODO(casey): Logging
+            // TODO: Logging
         }
     }
     else
     {
-        // TODO(casey): Logging
+        // TODO: Logging
     }
     
     return(0);

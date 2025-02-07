@@ -17,8 +17,31 @@ typedef uint64_t    u64;
 typedef float       f32;
 typedef double      f64;
 
+global_variable s8  min_s8  = (s8) 0x80;
+global_variable s16 min_s16 = (s16)0x8000;
+global_variable s32 min_s32 = (s32)0x80000000;
+global_variable s64 min_s64 = (s64)0x8000000000000000llu;
+
+global_variable s8  max_s8  = (s8) 0x7f;
+global_variable s16 max_s16 = (s16)0x7fff;
+global_variable s32 max_s32 = (s32)0x7fffffff;
+global_variable s64 max_s64 = (s64)0x7fffffffffffffffllu;
+
+global_variable u8  max_u8  = 0xff;
+global_variable u16 max_u16 = 0xffff;
+global_variable u32 max_u32 = 0xffffffff;
+global_variable u64 max_u64 = 0xffffffffffffffffllu;
+
 typedef struct String {
     u64 length;
     u8  *str;
 } String;
+
+#define STRING(s) (String){strlen(s), s}
+
+typedef struct File {
+    u64     Length;
+    void    *Data;
+} File;
+
 #endif
