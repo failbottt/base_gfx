@@ -18,7 +18,7 @@ I don't have grand plans. It's all for fun, learning, and creating my own toolse
 
 ### Advice
 
-If you're interested in C and native programming I suggest you open up Handmade Her (link below) on YouTube and follow along with Casey. He's excellent, and you'll learn a ton.
+If you're interested in C and native programming I suggest you open up Handmade Hero (link below) on YouTube and follow along with Casey. He's excellent, and you'll learn a ton.
 
 ### Credits
 
@@ -33,3 +33,7 @@ https://handmade.network/
 https://www.twitch.tv/j_blow
 
 https://www.rfleury.com/
+
+### Tooling
+
+Rad Debugger: https://github.com/EpicGamesExt/raddebugger
