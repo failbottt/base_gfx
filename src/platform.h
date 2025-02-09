@@ -16,7 +16,7 @@ typedef struct game_offscreen_buffer
 typedef struct game_button_state
 {
     u64 HalfTransitionCount;
-    u8 EndedDown;
+    u64 EndedDown;
 } game_button_state;
 
 typedef struct game_controller_input {
@@ -64,7 +64,7 @@ GameUpdateAndRender(game_memory *Memory, game_input *GameInput, game_offscreen_b
 #if BUILD_INTERNAL
 internal File DEBUGPlatformReadEntireFile(char *Filename);
 internal u8 DEBUGPlatformWriteEntireFile(char *Filename, u64 MemorySize, void *Memory);
-internal void DEBUGPlatformFreeFileMemory(MemoryResult);
+internal void DEBUGPlatformFreeFileMemory(void *Memory, u64 MemorySize);
 #endif
 
 // temp definitions

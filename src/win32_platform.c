@@ -1,5 +1,5 @@
-#include "platform.h"
 #include <windows.h>
+#include "platform.h"
 
 internal void
 RenderWeirdGradient(game_offscreen_buffer Buffer, int BlueOffset, int GreenOffset)
@@ -92,7 +92,7 @@ DEBUGPlatformReadEntireFile(char *Filename)
                 else
                 {
                     // logging
-                    DEBUGPlatformFreeFileMemory(Result, FileSize64);
+                    DEBUGPlatformFreeFileMemory(Result.Data, FileSize64);
                 }
             }
             else
@@ -130,11 +130,11 @@ DEBUGPlatformFreeFileMemory(void *Memory, u64 MemorySize)
 }
 
 internal void
-GameUpdateAndRender(game_memory *Memory, game_input *GameInput, game_offscreen_buffer *Buffer)
+GameUpdateAndRender(game_memory *GameMemory, game_input *GameInput, game_offscreen_buffer *Buffer)
 {
-    game_state *GameState = (game_state *)Memory->PermenantStorage;
-    Assert(sizeof(game_state) <= Memory->PermenantStorageSize);
-    if(!Memory->IsInitialized) 
+    game_state *GameState = (game_state *)GameMemory->PermenantStorage;
+    Assert(sizeof(game_state) <= GameMemory->PermenantStorageSize);
+    if(!GameMemory->IsInitialized) 
     {
         // The problem with this layout is that we're streaming from a HD
         // and _any_ read could fail at some point. For instance, if you're reading
@@ -161,20 +161,18 @@ GameUpdateAndRender(game_memory *Memory, game_input *GameInput, game_offscreen_b
         /* CloseFile(File); */
 
         char *Filename = "../assets/images/test.png";
-        File BitmapMemory = DEBUGPlatformReadEntireFile(Filename);
-        if(BitmapMemory.Length > 0)
+        File Memory = DEBUGPlatformReadEntireFile(Filename);
+        if(Memory.Length > 0)
         {
-            DEBUGPlatformWriteEntireFile("../assets/foo.png", BitmapMemory.Length, BitmapMemory.Data);
-            /* DEBUGPlatformFreeFileMemory(BitmapMemory); */
+            DEBUGPlatformWriteEntireFile("../assets/foo.png", Memory.Length, Memory.Data);
+            DEBUGPlatformFreeFileMemory(Memory.Data, Memory.Length);
         }
-
-
 
         GameState->GreenOffset = 0;
         GameState->BlueOffset = 0;
         
         // maybe this should be done on the os side of things
-        Memory->IsInitialized = 1;
+        GameMemory->IsInitialized = 1;
     }
 
     game_controller_input *Input = &GameInput->Controller;

@@ -15,7 +15,11 @@
 
 #define ArrayCount(Array) (sizeof(Array) / sizeof((Array)[0]))
 
-#define STRING(s) (String){strlen(s), s}
+#define Stringify_(S) #S
+#define Stringify(S) Stringify_(S)
+#define Glue_(A,B) A##B
+#define Glue(A,B) Glue_(A,B)
+
 #define KB(x) ((x) << 11)
 #define MB(x) ((x) << 20)
 #define GB(x) ((x) << 30)
