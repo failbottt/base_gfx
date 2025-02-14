@@ -2,7 +2,7 @@
 #include "platform.h"
 
 internal void
-RenderWeirdGradient(game_offscreen_buffer Buffer, int BlueOffset, int GreenOffset)
+RenderWeirdGradient(game_offscreen_buffer Buffer, u64 BlueOffset, u64 GreenOffset)
 {
     u8 *Row = (u8 *)Buffer.Memory;    
     for(int Y = 0;
@@ -30,20 +30,23 @@ DEBUGPlatformWriteEntireFile(char *Filename, u64 MemorySize, void *Memory)
     u8 Result = 0;
 
     HANDLE FileHandle = CreateFile(Filename, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
-    DWORD LastError = GetLastError();
+    /* DWORD LastError = GetLastError(); */
 
     if(FileHandle != INVALID_HANDLE_VALUE)
     {
-        DWORD BytesWritten;
-        if(WriteFile(FileHandle, Memory, MemorySize, &BytesWritten, 0) && (MemorySize == BytesWritten))
-        {
-            // file read success
-            Result = (BytesWritten == MemorySize);
+        LPDWORD BytesWritten = 0;
+        if(WriteFile(FileHandle, Memory, MemorySize, BytesWritten, 0))
+        { 
+            if (MemorySize == *BytesWritten)
+            {
+                // file read success
+                Result = (*BytesWritten == MemorySize);
+            }
         }
         else
         {
             // logging
-            DWORD LastError = GetLastError();
+            /* DWORD LastError = GetLastError(); */
         }
 
         CloseHandle(FileHandle);
@@ -63,7 +66,7 @@ DEBUGPlatformReadEntireFile(char *Filename)
     File Result = {0};
 
     HANDLE FileHandle = CreateFile(Filename, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-    DWORD LastError = GetLastError();
+    // DWORD LastError = GetLastError();
 
     if(FileHandle != INVALID_HANDLE_VALUE)
     {
@@ -74,19 +77,19 @@ DEBUGPlatformReadEntireFile(char *Filename)
             void *Buffer = VirtualAlloc(0, FileSize.QuadPart, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
             if(Buffer)
             {
-                DWORD BytesRead;
+                LPDWORD BytesRead = 0;
                 // C is required to execute these in order
                 // A && B && C
                 // will always be A THEN B THEN C
-                if(ReadFile(FileHandle, Buffer, FileSize.QuadPart, &BytesRead, 0) &&
-                // if we got the file size
-                // someone truncated the file
-                // we read the file
-                // and we didn't read back the expected size we know something went wrong
-                    (FileSize64 == BytesRead))
+                if(ReadFile(FileHandle, Buffer, FileSize.QuadPart, BytesRead, 0) &&
+                        // if we got the file size
+                        // someone truncated the file
+                        // we read the file
+                        // and we didn't read back the expected size we know something went wrong
+                        (FileSize64 == *BytesRead))
                 {
                     // file read success
-                    Result.Length = BytesRead;
+                    Result.Length = *BytesRead;
                     Result.Data = Buffer;
                 }
                 else

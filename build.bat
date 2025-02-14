@@ -1,6 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
+if exist build rmdir /s /q "./build"
+
 :: --- unpack arguments -------------------------------------------------------
 REM for %%a in (%*) do set "%%a=2"
 REM if not "%msvc%"=="1" if not "%clang%"=="1" set msvc=1
@@ -11,12 +13,12 @@ REM if "%msvc%"=="1"    set clang=0 && echo [msvc compile]
 REM if "%clang%"=="1"   set msvc=0 && echo [clang compile]
 
 set cl_common=     /I..\src\ /nologo /FC /Z7
-set cl_debug=      call cl /Od /Ob1 /DBUILD_DEBUG=1 /DBUILD_INTERNAL=1 %cl_common%
+set cl_debug=      call cl /Od /Ob1 /DBUILD_DEBUG=1 /W2 /DBUILD_INTERNAL=1 %cl_common%
 
 :: ------ prep build directory ------
 if not exist build mkdir build
 
 :: ------ build ------
 pushd build
-echo [building...] && %cl_debug% ../src/win32_main.c /link user32.lib gdi32.lib
+echo [building...] && %cl_debug% ../src/win32_main_base.c /link user32.lib gdi32.lib winmm.lib
 popd

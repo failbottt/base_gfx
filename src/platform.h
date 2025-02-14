@@ -51,7 +51,7 @@ typedef struct game_memory
 
 // NOTE(spangler): services that the game provides to the platform layer
 // timing, controller/keyboard input, bitmap buffer to use, sound buffer to use.
-internal void 
+void 
 GameUpdateAndRender(game_memory *Memory, game_input *GameInput, game_offscreen_buffer *Buffer);
 
 // NOTE(spangler): services that the platform layer provides to the game
