@@ -25,6 +25,7 @@
 #include <windows.h>
 #include <timeapi.h>
 #include <stdio.h>
+#include <dsound.h>
 
 #include "platform.h"
 #include "win32_platform_base.c"
@@ -287,6 +288,90 @@ Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
         return Result;
 }
 
+/* #define DIRECT_SOUND_CREATE(name) HRESULT WINAPI name(LPCGUID pcGuidDevice, LPDIRECTSOUND *ppDS, LPUNKNOWN pUnkOuter); */
+/* typedef DIRECT_SOUND_CREATE(direct_sound_create); */
+
+/* internal void */
+/* Win32InitDirectSound(HWND Window, u64 SamplesPerSecond, u64 BufferSize) */
+/* { */
+/*     // NOTE(casey): Load the library */
+/*     HMODULE DSoundLibrary = LoadLibraryA("dsound.dll"); */
+/*     if(DSoundLibrary) */
+/*     { */
+/*         // NOTE(casey): Get a DirectSound object! - cooperative */
+/*         direct_sound_create *DirectSoundCreate = (direct_sound_create *) */
+/*             GetProcAddress(DSoundLibrary, "DirectSoundCreate"); */
+
+/*         // TODO(casey): Double-check that this works on XP - DirectSound8 or 7?? */
+/*         LPDIRECTSOUND DirectSound; */
+/*         if(DirectSoundCreate && SUCCEEDED(DirectSoundCreate(0, &DirectSound, 0))) */
+/*         { */
+/*             WAVEFORMATEX WaveFormat = {}; */
+/*             WaveFormat.wFormatTag = WAVE_FORMAT_PCM; */
+/*             WaveFormat.nChannels = 2; */
+/*             WaveFormat.nSamplesPerSec = SamplesPerSecond; */
+/*             WaveFormat.wBitsPerSample = 16; */
+/*             WaveFormat.nBlockAlign = (WaveFormat.nChannels*WaveFormat.wBitsPerSample) / 8; */
+/*             WaveFormat.nAvgBytesPerSec = WaveFormat.nSamplesPerSec*WaveFormat.nBlockAlign; */
+/*             WaveFormat.cbSize = 0; */
+
+/*             if(SUCCEEDED(DirectSound->SetCooperativeLevel(Window, DSSCL_PRIORITY))) */
+/*             { */
+/*                 DSBUFFERDESC BufferDescription = {}; */
+/*                 BufferDescription.dwSize = sizeof(BufferDescription); */
+/*                 BufferDescription.dwFlags = DSBCAPS_PRIMARYBUFFER; */
+
+/*                 // NOTE(casey): "Create" a primary buffer */
+/*                 // TODO(casey): DSBCAPS_GLOBALFOCUS? */
+/*                 LPDIRECTSOUNDBUFFER PrimaryBuffer; */
+/*                 if(SUCCEEDED((DirectSound)->SetCooperativeLevel()) */
+/*                 { */
+/*                     HRESULT Error = PrimaryBuffer->SetFormat(&WaveFormat); */
+/*                     if(SUCCEEDED(Error)) */
+/*                     { */
+/*                         // NOTE(casey): We have finally set the format! */
+/*                         OutputDebugStringA("Primary buffer format was set.\n"); */
+/*                     } */
+/*                     else */
+/*                     { */
+/*                         // TODO(casey): Diagnostic */
+/*                     } */
+/*                 } */
+/*                 else */
+/*                 { */
+/*                     // TODO(casey): Diagnostic */
+/*                 } */
+/*             } */
+/*             else */
+/*             { */
+/*                 // TODO(casey): Diagnostic */
+/*             } */
+
+/*             // TODO(casey): DSBCAPS_GETCURRENTPOSITION2 */
+/*             DSBUFFERDESC BufferDescription = {}; */
+/*             BufferDescription.dwSize = sizeof(BufferDescription); */
+/*             BufferDescription.dwFlags = 0; */
+/*             BufferDescription.dwBufferBytes = BufferSize; */
+/*             BufferDescription.lpwfxFormat = &WaveFormat; */
+/*             LPDIRECTSOUNDBUFFER SecondaryBuffer; */
+/*             HRESULT Error = DirectSound->CreateSoundBuffer(&BufferDescription, &SecondaryBuffer, 0); */
+/*             if(SUCCEEDED(Error)) */
+/*             { */
+/*                 OutputDebugStringA("Secondary buffer created successfully.\n"); */
+/*             } */
+/*         } */
+/*         else */
+/*         { */
+/*             // TODO(casey): Diagnostic */
+/*         } */
+/*     } */
+/*     else */
+/*     { */
+/*         // TODO(casey): Diagnostic */
+/*     } */
+/* } */
+
+
 
 int CALLBACK
 WinMain(HINSTANCE Instance,
@@ -345,6 +430,8 @@ WinMain(HINSTANCE Instance,
             int XOffset = 0;
             int YOffset = 0;
 
+            /* Win32InitDirectSound(Window, 48000, 48000*sizeof(u16)*2); */
+
             GlobalRunning = TRUE;
 
 #if BUILD_INTERNAL
@@ -389,6 +476,7 @@ WinMain(HINSTANCE Instance,
                     Buffer.Width = GlobalBackbuffer.Width;
                     Buffer.Height = GlobalBackbuffer.Height;
                     Buffer.Pitch = GlobalBackbuffer.Pitch;
+                    Buffer.BytesPerPixel = GlobalBackbuffer.Pitch;
 
                     GameUpdateAndRender(&Memory, NewInput, &Buffer);
 
@@ -453,7 +541,7 @@ WinMain(HINSTANCE Instance,
             else 
             {
                 // log that the game couldn't start
-                fprintf(stderr, "ERROR: unable to init game");
+                OutputDebugStringA("ERROR: unable to init game");
             }
         }
         else

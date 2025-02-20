@@ -131,6 +131,65 @@ DEBUGPlatformFreeFileMemory(void *Memory, u64 MemorySize)
         // unable to free
     }
 }
+internal u32
+RoundReal32ToInt32(f32 Real32)
+{
+    s32 Result = (u32)(Real32 + 0.5f);
+    // TODO(casey): Intrinsic????
+    return(Result);
+}
+
+internal void
+DrawRectangle(game_offscreen_buffer *Buffer,
+              f32 RealMinX, f32 RealMinY, f32 RealMaxX, f32 RealMaxY,
+              u32 Color)
+{
+    // TODO(casey): Floating point color tomorrow!!!!!!
+
+    s32 MinX = RoundReal32ToInt32(RealMinX);
+    s32 MinY = RoundReal32ToInt32(RealMinY);
+    s32 MaxX = RoundReal32ToInt32(RealMaxX);
+    s32 MaxY = RoundReal32ToInt32(RealMaxY);
+
+    if(MinX < 0)
+    {
+        MinX = 0;
+    }
+
+    if(MinY < 0)
+    {
+        MinY = 0;
+    }
+
+    if(MaxX > Buffer->Width)
+    {
+        MaxX = Buffer->Width;
+    }
+
+    if(MaxY > Buffer->Height)
+    {
+        MaxY = Buffer->Height;
+    }
+    
+
+    u8 *Row = ((u8 *)Buffer->Memory +
+                  MinX*Buffer->BytesPerPixel +
+                  MinY*Buffer->Pitch);
+    for(int Y = MinY;
+        Y < MaxY;
+        ++Y)
+    {
+        u32 *Pixel = (u32 *)Row;
+        for(int X = MinX;
+            X < MaxX;
+            ++X)
+        {            
+            *Pixel++ = Color;
+        }
+        
+        Row += Buffer->Pitch;
+    }
+}
 
 internal void
 GameUpdateAndRender(game_memory *GameMemory, game_input *GameInput, game_offscreen_buffer *Buffer)
@@ -194,5 +253,7 @@ GameUpdateAndRender(game_memory *GameMemory, game_input *GameInput, game_offscre
     if(Input->Left.EndedDown) {
         GameState->BlueOffset += 1;
     }
-    RenderWeirdGradient(*Buffer, GameState->BlueOffset, GameState->GreenOffset);
+    /* RenderWeirdGradient(*Buffer, GameState->BlueOffset, GameState->GreenOffset); */
+    DrawRectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 0x00FF00FF);
+    DrawRectangle(Buffer, 10.0f, 10.0f, 40.0f, 40.0f, 0x0000FFFF);
 }
