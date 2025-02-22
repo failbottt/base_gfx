@@ -4,7 +4,7 @@
 #include "base_inc.h"
 #include "handmade_math.h"
 
-typedef struct game_offscreen_buffer
+typedef struct GameOffscreenBuffer
 {
     // Pixels are always 32-bits wide, Memory Order BB GG RR XX
     void *Memory;
@@ -12,7 +12,7 @@ typedef struct game_offscreen_buffer
     int Height;
     int Pitch;
     int BytesPerPixel;
-} game_offscreen_buffer;
+} GameOffscreenBuffer;
 
 typedef struct game_button_state
 {
@@ -34,12 +34,13 @@ typedef struct game_controller_input {
     };
 } game_controller_input;
 
-typedef struct game_input
+typedef struct GameInput
 {
     game_controller_input Controller;
-} game_input;
+    f32 dt_for_frame;
+} GameInput;
 
-typedef struct game_memory
+typedef struct GameMemory
 {
     u8 IsInitialized;
     u64 PermenantStorageSize;
@@ -47,13 +48,13 @@ typedef struct game_memory
                             //
     u64 ScratchStorageSize;
     void* ScratchStorage; // NOTE(spangler): REQUIRED to be cleared to zero at startup
-} game_memory;
+} GameMemory;
 
 
 // NOTE(spangler): services that the game provides to the platform layer
 // timing, controller/keyboard input, bitmap buffer to use, sound buffer to use.
 void 
-GameUpdateAndRender(game_memory *Memory, game_input *GameInput, game_offscreen_buffer *Buffer);
+GameUpdateAndRender(GameMemory *Memory, GameInput *game_input, GameOffscreenBuffer *buffer);
 
 // NOTE(spangler): services that the platform layer provides to the game
 // e.g. LoadFile();
@@ -69,9 +70,11 @@ internal void DEBUGPlatformFreeFileMemory(void *Memory, u64 MemorySize);
 #endif
 
 // temp definitions
-typedef struct game_state {
-    u64 GreenOffset;
-    u64 BlueOffset;
-} game_state;
+typedef struct GameState {
+    /* u64 GreenOffset; */
+    /* u64 BlueOffset; */
+    f32 player_x;
+    f32 player_y;
+} GameState;
 
 #endif // !PLATFORM_H

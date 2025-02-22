@@ -30,10 +30,13 @@
 #include "platform.h"
 #include "win32_platform_base.c"
 
+#define SCREEN_WIDTH 960
+#define SCREEN_HEIGHT 540
+
 global_variable u64 GlobalPerfCountFrequency;
 global_variable int GlobalRunning;
 
-typedef struct win32_offscreen_buffer
+typedef struct Win32OffscreenBuffer
 {
     // Pixels are always 32-bits wide, Memory Order BB GG RR XX
     BITMAPINFO Info;
@@ -41,8 +44,9 @@ typedef struct win32_offscreen_buffer
     int Width;
     int Height;
     int Pitch;
-} win32_offscreen_buffer;
-global_variable win32_offscreen_buffer GlobalBackbuffer;
+    int BytresPerPixel;
+} Win32OffscreenBuffer;
+global_variable Win32OffscreenBuffer global_back_buffer;
 
 typedef struct win32_window_dimension
 {
@@ -65,7 +69,7 @@ Win32GetWindowDimension(HWND Window)
 }
 
 internal void
-Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
+Win32ResizeDIBSection(Win32OffscreenBuffer *Buffer, int Width, int Height)
 {
     if(Buffer->Memory)
     {
@@ -76,6 +80,7 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
     Buffer->Height = Height;
 
     int BytesPerPixel = 4;
+    Buffer->BytresPerPixel = BytesPerPixel;
 
     // When the biHeight field is negative, this is the clue to
     // Windows to treat this bitmap as top-down, not bottom-up, meaning that
@@ -96,9 +101,9 @@ Win32ResizeDIBSection(win32_offscreen_buffer *Buffer, int Width, int Height)
 }
 
 internal void
-Win32DisplayBufferInWindow(HDC DeviceContext,
+win32_display_buffer_in_window(HDC DeviceContext,
                            int WindowWidth, int WindowHeight,
-                           win32_offscreen_buffer Buffer)
+                           Win32OffscreenBuffer Buffer)
 {
     // TODO: Aspect ratio correction
     
@@ -258,8 +263,8 @@ Win32MainWindowCallback(HWND Window,
             PAINTSTRUCT Paint;
             HDC DeviceContext = BeginPaint(Window, &Paint);
             win32_window_dimension Dimension = Win32GetWindowDimension(Window);
-            Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height,
-                                       GlobalBackbuffer);
+            win32_display_buffer_in_window(DeviceContext, Dimension.Width, Dimension.Height,
+                                       global_back_buffer);
             EndPaint(Window, &Paint);
         } break;
 
@@ -273,7 +278,7 @@ Win32MainWindowCallback(HWND Window,
 }
 
 inline LARGE_INTEGER
-Win32GetWallClock()
+win32_get_wall_clock()
 {
     LARGE_INTEGER Result;
     QueryPerformanceCounter(&Result);
@@ -281,7 +286,7 @@ Win32GetWallClock()
 }
 
 inline f32
-Win32GetSecondsElapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
+win32_get_seconds_elapsed(LARGE_INTEGER Start, LARGE_INTEGER End)
 {
         f32 Result = ((f32)(End.QuadPart - Start.QuadPart)/ 
                         (f32)GlobalPerfCountFrequency);
@@ -393,10 +398,10 @@ WinMain(HINSTANCE Instance,
 
     // TODO: How do we reliably get the info about the current monitor from windows?
     int MonitorRefreshHz = 60;
-    int GameUpdateHz = MonitorRefreshHz / 2;
+    int GameUpdateHz = MonitorRefreshHz;
     f32 TargetSecondsPerFrame = 1.0f / (f32)GameUpdateHz;
 
-    Win32ResizeDIBSection(&GlobalBackbuffer, 1280, 720);
+    Win32ResizeDIBSection(&global_back_buffer, SCREEN_WIDTH, SCREEN_HEIGHT);
     
     WindowClass.style = CS_HREDRAW|CS_VREDRAW|CS_OWNDC;
     WindowClass.lpfnWndProc = Win32MainWindowCallback;
@@ -440,7 +445,7 @@ WinMain(HINSTANCE Instance,
             LPVOID BaseAddress = 0; 
 #endif
 
-            game_memory Memory = {};
+            GameMemory Memory = {};
             Memory.PermenantStorageSize = MB(64);
             Memory.ScratchStorageSize = GB((u64)4);
 
@@ -450,18 +455,20 @@ WinMain(HINSTANCE Instance,
 
             if (Memory.PermenantStorage && Memory.ScratchStorage) 
             {
-                game_input Input[2] = {};
-                game_input *NewInput = &Input[0];
-                game_input *OldInput = &Input[1];
+                GameInput input[2] = {};
+                GameInput *new_input = &input[0];
+                GameInput *old_input = &input[1];
 
-                LARGE_INTEGER LastCounter = Win32GetWallClock();
+                new_input->dt_for_frame = TargetSecondsPerFrame;
+
+                LARGE_INTEGER LastCounter = win32_get_wall_clock();
 
                 // __rdtsc is only used for profiling, not game time because it's processor specific.
                 u64 LastCycleCount = __rdtsc();
                 while(GlobalRunning)
                 {
-                    game_controller_input *OldKeyboardController = &OldInput->Controller;
-                    game_controller_input *NewKeyboardController = &NewInput->Controller;
+                    game_controller_input *OldKeyboardController = &old_input->Controller;
+                    game_controller_input *NewKeyboardController = &new_input->Controller;
 
                     for (int ButtonIndex = 0; ButtonIndex < ArrayCount(NewKeyboardController->Buttons); ButtonIndex++)
                     {
@@ -471,17 +478,17 @@ WinMain(HINSTANCE Instance,
 
                     Win32ProcessPendingMessages(NewKeyboardController);
 
-                    game_offscreen_buffer Buffer = {};
-                    Buffer.Memory = GlobalBackbuffer.Memory;
-                    Buffer.Width = GlobalBackbuffer.Width;
-                    Buffer.Height = GlobalBackbuffer.Height;
-                    Buffer.Pitch = GlobalBackbuffer.Pitch;
-                    Buffer.BytesPerPixel = GlobalBackbuffer.Pitch;
+                    GameOffscreenBuffer Buffer = {};
+                    Buffer.Memory = global_back_buffer.Memory;
+                    Buffer.Width = global_back_buffer.Width;
+                    Buffer.Height = global_back_buffer.Height;
+                    Buffer.Pitch = global_back_buffer.Pitch;
+                    Buffer.BytesPerPixel = global_back_buffer.BytresPerPixel;
 
-                    GameUpdateAndRender(&Memory, NewInput, &Buffer);
+                    game_update_and_render(&Memory, new_input, &Buffer);
 
-                    LARGE_INTEGER WorkCounter = Win32GetWallClock();
-                    f32 WorkSecondsElapsed = Win32GetSecondsElapsed(LastCounter, WorkCounter);
+                    LARGE_INTEGER WorkCounter = win32_get_wall_clock();
+                    f32 WorkSecondsElapsed = win32_get_seconds_elapsed(LastCounter, WorkCounter);
 
                     f32 SecondsElapsedForFrame = WorkSecondsElapsed;
                     if (SecondsElapsedForFrame < TargetSecondsPerFrame) 
@@ -493,7 +500,7 @@ WinMain(HINSTANCE Instance,
                                 DWORD SleepMS = (DWORD)(1000.0f * (TargetSecondsPerFrame - SecondsElapsedForFrame));
                                 Sleep(SleepMS);
                             }
-                            SecondsElapsedForFrame = Win32GetSecondsElapsed(LastCounter, Win32GetWallClock());
+                            SecondsElapsedForFrame = win32_get_seconds_elapsed(LastCounter, win32_get_wall_clock());
                         }
                     }
                     else
@@ -503,15 +510,15 @@ WinMain(HINSTANCE Instance,
                     }
 
                     win32_window_dimension Dimension = Win32GetWindowDimension(Window);
-                    Win32DisplayBufferInWindow(DeviceContext, Dimension.Width, Dimension.Height,
-                            GlobalBackbuffer);
+                    win32_display_buffer_in_window(DeviceContext, Dimension.Width, Dimension.Height,
+                            global_back_buffer);
 
-                    game_input *Temp = NewInput;
-                    NewInput = OldInput;
-                    OldInput = Temp;
+                    GameInput *temp = new_input;
+                    new_input = old_input;
+                    old_input = temp;
 
-                    LARGE_INTEGER EndCounter = Win32GetWallClock();
-                    f64 MSPerFrame = (f64)(1000.0f*Win32GetSecondsElapsed(LastCounter, EndCounter));
+                    LARGE_INTEGER EndCounter = win32_get_wall_clock();
+                    f64 MSPerFrame = (f64)(1000.0f*win32_get_seconds_elapsed(LastCounter, EndCounter));
 
                     LastCounter = EndCounter;
 
