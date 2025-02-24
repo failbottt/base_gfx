@@ -213,13 +213,6 @@ draw_rectangle(GameOffscreenBuffer *buffer,
     }
 }
 
-internal u32
-truncate_f32_to_u32(f32 f)
-{
-    u32 Result = (u32)f;
-    return(Result);
-}
-
 typedef struct TileMap
 {
     u32 *tiles;
@@ -259,7 +252,9 @@ get_tile_map(World *world, u32 tile_map_x, u32 tile_map_y)
     if((tile_map_x >= 0) && (tile_map_x < world->tile_map_count_x) &&
         (tile_map_y >= 0) && (tile_map_y < world->tile_map_count_y))
     {
-         tile_map = &world->tile_maps[((tile_map_y*world->tile_map_count_x) + tile_map_x)];
+        /*  accessing a 1D thing in a 2D way */
+        /*  Array[y*w + x] */
+        tile_map = &world->tile_maps[((tile_map_y*world->tile_map_count_x) + tile_map_x)];
     }
 
     return tile_map;
@@ -369,101 +364,12 @@ is_world_point_empty(World *world, RawPosition *raw_position)
     CanonicalPosition can_pos = get_canonical_world_position(world, raw_position);
     TileMap *tile_map = get_tile_map(world, can_pos.tile_map_x, can_pos.tile_map_y);
     empty = is_tile_map_point_empty(world, tile_map, (f32)can_pos.tile_x, (f32)can_pos.tile_y);
-
-    /* if((test_tile_x >= 0) && (test_tile_x < world->count_x) && */
-    /*         (test_tile_y >= 0) && (test_tile_y < world->count_y)) */
-    /* { */
-
-    /*     /1* u32 tile_map_value = TileMap[test_tile_y][test_tile_x]; *1/ */
-
-    /*     // accessing a 1D thing in a 2D way */
-    /*     // Array[y*w + x] */
-    /*     // */
-    /*     u32 tile_map_value = get_tile_value_unchecked(tile_map, test_tile_x, test_tile_y); */
-    /*     empty = (tile_map_value == 0); */
-    /* } */
-
     return empty;
 }
 
-
-/* internal u32 */
-/* is_world_point_empty(World *world, u32 tile_map_x, u32 tile_map_y, f32 test_x, f32 test_y) */
-/* { */
-/*     u32 empty = FALSE; */
-
-/*     TileMap *tile_map = get_tile_map(world, tile_map_x, tile_map_y); */ 
-
-/*     if (tile_map) */
-/*     { */
-/*         f32 x = ((test_x - tile_map->upper_left_x)/tile_map->tile_width); */
-/*         f32 y = ((test_y - tile_map->upper_left_y)/tile_map->tile_height); */
-
-/*         u32 player_tile_x = truncate_f32_to_u32(x); */
-/*         u32 player_tile_y = truncate_f32_to_u32(y); */
-
-/*         // where we are in "tilemap space" */
-
-/*         if((player_tile_x >= 0) && (player_tile_x < tile_map->count_x) && */
-/*                 (player_tile_y >= 0) && (player_tile_x < tile_map->count_y)) */
-/*         { */
-/*             u32 tile_map_value = get_tile_value_unchecked(tile_map, player_tile_x, player_tile_y); */
-/*             empty = (tile_map_value == 0); */
-/*         } */
-
-/*     } */
-/*     return empty; */
-/* } */
 internal void
 game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscreenBuffer *buffer)
 {
-    GameState *game_state = (GameState *)GameMemory->PermenantStorage;
-    Assert(sizeof(game_state) <= GameMemory->PermenantStorageSize);
-    if(!GameMemory->IsInitialized) 
-    {
-        // The problem with this layout is that we're streaming from a HD
-        // and _any_ read could fail at some point. For instance, if you're reading
-        // from a CD and the user removes the CD from the drive the stream would break.
-        // so that's a failure case for _every_ read.
-        //
-        // Threading safety problems here also since each thread would need its own
-        // file handle.
-        //
-        // This requires that calls be sync'd and it stalls the whole program because
-        // we're coupling the program to slow HD reads.
-        //
-        /* char *Filename = "test.bmp"; */
-        /* file_handle *File = OpenFile(Filename); */
-        /* u8 Buffer[128]; */
-        /* if (Read(file, sizeof(Buffer), Buffer)) */
-        /* { */
-        /*     // Use buffer */
-        /* } */
-        /* else */ 
-        /* { */
-        /*     // error */     
-        /* } */
-        /* CloseFile(File); */
-
-        // @Fix: I think this is broken
-        /* char *Filename = "../assets/images/test.png"; */
-        /* File Memory = debug_platform_read_entire_file(Filename); */
-        /* if(Memory.Length > 0) */
-        /* { */
-        /*     debug_platform_write_entire_file("../assets/foo.png", Memory.Length, Memory.Data); */
-        /*     debug_platform_free_file_memory(Memory.Data, Memory.Length); */
-        /* } */
-
-        /* GameState->GreenOffset = 0; */
-        /* GameState->BlueOffset = 0; */
-        
-        // maybe this should be done on the os side of things
-        GameMemory->IsInitialized = 1;
-
-        // starting position for the player character
-        game_state->player_x = 250.0f;
-        game_state->player_y = 100.0f;
-    }
 
     // take the window height and window width to determine how many columns and rows
     //
@@ -477,52 +383,56 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
     #define TILE_MAP_COUNT_X 17
     u32 Tiles00[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
     {
-        { 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
-        { 1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 1, 1},
-        { 1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 1, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 1, 1},
-        { 1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 0},
-        { 1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 1, 1},
-        { 1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 1, 1},
-        { 1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 1, 1},
-        { 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1}
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
+        {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 1, 1},
+        {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0, 1},
+        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0, 1},
+        {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
     };
+    
     u32 Tiles01[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
     {
-        { 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
-        { 1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1},
-        { 1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 0},
-        { 1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0, 1},
-        { 1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1},
-        { 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1}
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 0},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
     };
+    
     u32 Tiles10[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
     {
-        { 1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1}
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
     };
+    
     u32 Tiles11[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
     {
-        { 1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
-        { 1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1}
+        {1, 1, 1, 1,  1, 1, 1, 1,  0, 1, 1, 1,  1, 1, 1, 1, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
     };
+
     TileMap tile_map0 = {.tiles = (u32 *)Tiles00};
     TileMap tile_map1 = {.tiles = (u32 *)Tiles10};
     TileMap tile_map2 = {.tiles = (u32 *)Tiles01};
@@ -533,16 +443,29 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
         {tile_map2, tile_map3}
     };
 
-    World world = {};
+    World world;
     world.tile_map_count_x = 2;
     world.tile_map_count_y = 2;
     world.count_x = TILE_MAP_COUNT_X;
     world.count_y = TILE_MAP_COUNT_Y;
-    world.upper_left_x = 0;
-    world.upper_left_y = -30;
+    world.upper_left_x = -30;
+    world.upper_left_y = 0;
     world.tile_width = 60;
     world.tile_height = 60;
     world.tile_maps = (TileMap *)tile_maps;
+    f32 player_width = 0.5f*world.tile_width;
+    f32 player_height = 0.5f*world.tile_height;
+
+    world.tile_maps = (TileMap *)tile_maps;
+    
+    GameState *game_state = (GameState *)GameMemory->PermenantStorage;
+    if(!GameMemory->IsInitialized) 
+    {
+        game_state->player_x = 150.f;
+        game_state->player_y = 150.f;
+
+        GameMemory->IsInitialized = TRUE;
+    }
 
     TileMap *tile_map = get_tile_map(&world, game_state->player_tile_map_x, game_state->player_tile_map_y);
     Assert(tile_map);
@@ -550,9 +473,6 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
     f32 PlayerR = 1.0f;
     f32 PlayerG = 1.0f;
     f32 PlayerB = 0.0f;
-
-    f32 PlayerWidth = 0.5f*world.tile_width;
-    f32 PlayerHeight = 0.5f*world.tile_height;
 
     GameInput *Input = game_input;
     // NOTE(casey): Use digital movement tuning
@@ -589,10 +509,10 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
     };
 
     RawPosition player_left = player_pos;
-    player_left.x -= 0.5f*PlayerWidth;
+    player_left.x -= 0.5f*player_width;
 
     RawPosition player_right = player_pos;
-    player_right.x += 0.5f*PlayerWidth;
+    player_right.x += 0.5f*player_width;
 
     u8 has_no_collision = is_world_point_empty(&world, &player_pos) && 
         is_world_point_empty(&world, &player_left) &&
@@ -601,8 +521,11 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
     if (has_no_collision)
     {
         CanonicalPosition can_pos = get_canonical_world_position(&world, &player_pos);
-        game_state->player_x = new_player_x;
-        game_state->player_y = new_player_y;
+
+        game_state->player_tile_map_x = can_pos.tile_map_x;
+        game_state->player_tile_map_y = can_pos.tile_map_y;                
+        game_state->player_x = world.upper_left_x + world.tile_width*can_pos.tile_x + can_pos.tile_rel_x;
+        game_state->player_y = world.upper_left_y + world.tile_height*can_pos.tile_y + can_pos.tile_rel_y;
     }
 
     draw_rectangle(buffer, 0.0f, 0.0f, (f32)buffer->Width, (f32)buffer->Height,
@@ -627,30 +550,17 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
             f32 MinY = world.upper_left_y + ((f32)Row)*world.tile_height;
             f32 MaxX = MinX + world.tile_width;
             f32 MaxY = MinY + world.tile_height;
-            
-#if 0
-            char b[256];
-            _snprintf_s(
-                    b, 
-                    sizeof(b), 
-                    256,
-                    "Row: %d, Column: %d\n", 
-                    Row, 
-                    Column);
-            OutputDebugStringA(b);
-#endif
-
             draw_rectangle(buffer, MinX, MinY, MaxX, MaxY, Gray, Gray, Gray);
         }
     }
     
     // draw the player
-    f32 PlayerLeft = game_state->player_x - 0.5f*PlayerWidth;
-    f32 PlayerTop = game_state->player_y - PlayerHeight;
+    f32 PlayerLeft = game_state->player_x - 0.5f*player_width;
+    f32 PlayerTop = game_state->player_y - player_height;
     draw_rectangle(buffer,
                   PlayerLeft, PlayerTop,
-                  PlayerLeft + PlayerWidth,
-                  PlayerTop + PlayerHeight,
+                  PlayerLeft + player_width,
+                  PlayerTop + player_height,
                   PlayerR, PlayerG, PlayerB);
 
     /* draw_rectangle(Buffer, 0.0f, 0.0f, (f32)Buffer->Width, (f32)Buffer->Height, 0.4f, .5f, 1.0f); */
