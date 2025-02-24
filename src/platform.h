@@ -73,6 +73,10 @@ internal void DEBUGPlatformFreeFileMemory(void *Memory, u64 MemorySize);
 typedef struct GameState {
     /* u64 GreenOffset; */
     /* u64 BlueOffset; */
+
+    u32 player_tile_map_x;
+    u32 player_tile_map_y;
+
     f32 player_x;
     f32 player_y;
 } GameState;
