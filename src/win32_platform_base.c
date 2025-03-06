@@ -240,7 +240,9 @@ get_tile_value_unchecked(World *world, TileMap *tile_map, u32 tile_x, u32 tile_y
     Assert((tile_x >= 0) && (tile_x < world->count_x) &&
             (tile_y >= 0) && (tile_y < world->count_y));
 
-    u32 tile_map_value = tile_map->tiles[((tile_y*world->count_x) + tile_x)];
+    u32 i = tile_y*world->count_x + tile_x;
+    u32 tile_map_value = tile_map->tiles[i];
+
     return tile_map_value;
 }
 
@@ -249,12 +251,13 @@ inline TileMap*
 get_tile_map(World *world, u32 tile_map_x, u32 tile_map_y)
 {
     TileMap *tile_map = 0;
+
     if((tile_map_x >= 0) && (tile_map_x < world->tile_map_count_x) &&
         (tile_map_y >= 0) && (tile_map_y < world->tile_map_count_y))
     {
         /*  accessing a 1D thing in a 2D way */
         /*  Array[y*w + x] */
-        tile_map = &world->tile_maps[((tile_map_y*world->tile_map_count_x) + tile_map_x)];
+        tile_map = &world->tile_maps[tile_map_y*world->tile_map_count_x + tile_map_x];
     }
 
     return tile_map;
@@ -309,7 +312,7 @@ typedef struct RawPosition
 } RawPosition;
 
 inline CanonicalPosition
-get_canonical_world_position(World *world, RawPosition *raw_position)
+get_canonical_position(World *world, RawPosition *raw_position)
 {
     CanonicalPosition result = {};
 
@@ -324,6 +327,8 @@ get_canonical_world_position(World *world, RawPosition *raw_position)
     result.tile_rel_x = x - result.tile_x*world->tile_width;
     result.tile_rel_y = y - result.tile_y*world->tile_height;
 
+    // @fix if I comment out the tile_rel_x assert it switches the map however, 
+    // the guy doesn't show up on the next map either
     Assert(result.tile_rel_x >= 0);
     Assert(result.tile_rel_y >= 0);
     Assert(result.tile_rel_x < world->tile_width);
@@ -361,16 +366,18 @@ is_world_point_empty(World *world, RawPosition *raw_position)
 {
     u32 empty = FALSE;
 
-    CanonicalPosition can_pos = get_canonical_world_position(world, raw_position);
+    CanonicalPosition can_pos = get_canonical_position(world, raw_position);
+
     TileMap *tile_map = get_tile_map(world, can_pos.tile_map_x, can_pos.tile_map_y);
+
     empty = is_tile_map_point_empty(world, tile_map, (f32)can_pos.tile_x, (f32)can_pos.tile_y);
+
     return empty;
 }
 
 internal void
 game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscreenBuffer *buffer)
 {
-
     // take the window height and window width to determine how many columns and rows
     //
     // ex:
@@ -384,10 +391,10 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
     u32 Tiles00[TILE_MAP_COUNT_Y][TILE_MAP_COUNT_X] =
     {
         {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
-        {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 1, 1},
+        {1, 1, 0, 0,  0, 1, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1},
         {1, 1, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 1, 0, 1},
         {1, 0, 0, 0,  0, 0, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 1},
-        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 1},
+        {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 0, 0, 0, 0},
         {1, 1, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  0, 1, 0, 0, 1},
         {1, 0, 0, 0,  0, 1, 0, 0,  1, 0, 0, 0,  1, 0, 0, 0, 1},
         {1, 1, 1, 1,  1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 0, 0, 1},
@@ -433,15 +440,16 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
         {1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1,  1, 1, 1, 1, 1},
     };
 
-    TileMap tile_map0 = {.tiles = (u32 *)Tiles00};
-    TileMap tile_map1 = {.tiles = (u32 *)Tiles10};
-    TileMap tile_map2 = {.tiles = (u32 *)Tiles01};
-    TileMap tile_map3 = {.tiles = (u32 *)Tiles11};
+    TileMap tile_map00 = {.tiles = (u32 *)Tiles00};
+    TileMap tile_map10 = {.tiles = (u32 *)Tiles10};
+    TileMap tile_map01 = {.tiles = (u32 *)Tiles01};
+    TileMap tile_map11 = {.tiles = (u32 *)Tiles11};
 
-    TileMap tile_maps[2][2] = {
-        {tile_map0, tile_map1},
-        {tile_map2, tile_map3}
-    };
+    TileMap tile_maps[2][2];
+    tile_maps[0][0] = tile_map00;
+    tile_maps[0][1] = tile_map10;
+    tile_maps[1][0] = tile_map01;
+    tile_maps[1][1] = tile_map11;
 
     World world;
     world.tile_map_count_x = 2;
@@ -461,10 +469,11 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
     GameState *game_state = (GameState *)GameMemory->PermenantStorage;
     if(!GameMemory->IsInitialized) 
     {
-        game_state->player_x = 150.f;
-        game_state->player_y = 150.f;
-
         GameMemory->IsInitialized = TRUE;
+
+        game_state->player_x = (f32)buffer->Width/2;
+        game_state->player_y = 512.f;
+
     }
 
     TileMap *tile_map = get_tile_map(&world, game_state->player_tile_map_x, game_state->player_tile_map_y);
@@ -514,13 +523,17 @@ game_update_and_render(GameMemory *GameMemory, GameInput *game_input, GameOffscr
     RawPosition player_right = player_pos;
     player_right.x += 0.5f*player_width;
 
-    u8 has_no_collision = is_world_point_empty(&world, &player_pos) && 
-        is_world_point_empty(&world, &player_left) &&
-        is_world_point_empty(&world, &player_right);
+    RawPosition player_top = player_pos;
+    player_top.y -= player_height;
 
-    if (has_no_collision)
+    u8 no_collision = is_world_point_empty(&world, &player_pos) && 
+        is_world_point_empty(&world, &player_left) &&
+        is_world_point_empty(&world, &player_right) && 
+        is_world_point_empty(&world, &player_top);
+
+    if (no_collision)
     {
-        CanonicalPosition can_pos = get_canonical_world_position(&world, &player_pos);
+        CanonicalPosition can_pos = get_canonical_position(&world, &player_pos);
 
         game_state->player_tile_map_x = can_pos.tile_map_x;
         game_state->player_tile_map_y = can_pos.tile_map_y;                
